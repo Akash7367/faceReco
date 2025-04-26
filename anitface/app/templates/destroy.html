@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Denied</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0077ff, #00c8ff);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            text-align: center;
+        }
+        h1 {
+            font-size: 4rem;
+            margin: 0;
+            text-shadow: 2px 2px 5px #002c7f, 0 0 10px #ffffff;
+            animation: glow 2s infinite alternate;
+        }
+        p {
+            font-size: 1.2rem;
+            margin: 1rem 0;
+            font-style: italic;
+            color: #d6f0ff;
+        }
+        button {
+            background: #004d99;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease-in-out;
+            text-transform: uppercase;
+        }
+        button:hover {
+            background: #0066cc;
+            transform: scale(1.1) rotate(-3deg);
+            box-shadow: 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .back-button {
+            margin-top: 2rem;
+            text-decoration: underline;
+            color: #cce6ff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .back-button:hover {
+            color: #80bfff;
+        }
+        .emoji-container {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            animation: float 3s ease-in-out infinite;
+        }
+        .emoji {
+            margin: 0 0.3rem;
+        }
+        @keyframes glow {
+            0% {
+                text-shadow: 2px 2px 5px #002c7f, 0 0 15px #004d99;
+            }
+            100% {
+                text-shadow: 4px 4px 10px #001933, 0 0 30px #00c8ff;
+            }
+        }
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        .bubbles {
+            position: absolute;
+            bottom: -100px;
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            z-index: -1;
+        }
+        .bubble {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            position: absolute;
+            bottom: 0;
+            border-radius: 50%;
+            animation: bubbleUp 7s infinite ease-in-out;
+        }
+        .bubble:nth-child(2n) {
+            width: 70px;
+            height: 70px;
+            animation-duration: 10s;
+        }
+        .bubble:nth-child(3n) {
+            width: 100px;
+            height: 100px;
+            animation-duration: 15s;
+        }
+        @keyframes bubbleUp {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-600px) scale(0.7);
+                opacity: 0;
+            }
+        }
+
+        .small-button {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="emoji-container">
+        <span class="emoji">😲</span>
+        <span class="emoji">🚫</span>
+        <span class="emoji">🤖</span>
+    </div>
+    <h1>ACCESS DENIED!</h1>
+    <p>Oops! You’re not supposed to be here. Let’s get you back where you belong! 🌀</p>
+    <button onclick="window.location.href='/'">Take Me Home</button>
+    
+    <div class="bubbles">
+        <div class="bubble" style="left: 10%;"></div>
+        <div class="bubble" style="left: 30%;"></div>
+        <div class="bubble" style="left: 50%;"></div>
+        <div class="bubble" style="left: 70%;"></div>
+        <div class="bubble" style="left: 90%;"></div>
+    </div>
+
+    <button onclick="askPassword()" class="small-button">.</button>
+    <p id="response-message" class="message"></p>
+    <script>
+        async function askPassword() {
+                    const password = prompt("Enter the password:");
+                    const message = document.getElementById("response-message");
+
+                    if (password) {
+                        try {
+                            const response = await fetch('/new_add', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ password }),
+                            });
+
+                            const result = await response.json();
+
+                            if (response.ok) {
+                                message.innerText = "Password accepted. Redirecting...";
+                                message.style.color = "lightgreen";
+                                setTimeout(() => {
+                                    window.location.href = result.redirect_url;
+                                }, 1000);
+                            } else {
+                                message.innerText = result.message || "Access denied!";
+                                message.style.color = "red";
+                            }
+                        } catch (error) {
+                            message.innerText = "An error occurred. Please try again.";
+                            message.style.color = "red";
+                        }
+                    }
+                }
+    </script>
+</body>
+</html>

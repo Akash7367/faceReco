@@ -1,0 +1,19 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore virtual environments
+venv/
+myenv/
+
+# Ignore migrations (optional if auto-generated)
+migrations/
+
+# Ignore Docker related files (optional)
+*.log
+
+# Ignore environment variables
+.env
+
+# Ignore database files (optional)
+instance/database.db

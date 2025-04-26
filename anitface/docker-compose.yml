@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"  # Maps port 5000 on the host to port 5000 in the container
+    volumes:
+      - .:/app  # Mounts the current directory into the container for development
+    environment:
+      - FLASK_ENV=development
