@@ -19,6 +19,7 @@ This is a Smart Attendance System that uses face recognition to automatically ma
 - NumPy
 - Pandas
 - CSV Module
+- Yolo
 - Tkinter (for GUI) [optional]
 
 ## 📸 Demo
