@@ -2,13 +2,25 @@ import os
 import cv2
 import time
 import math
-from flask import Flask, render_template, request, redirect, url_for, flash, Blueprint, current_app, jsonify
+import io
+import csv
+import calendar
+from flask import Flask, render_template, request, redirect, url_for, flash, Blueprint, current_app, jsonify, session, Response
 from .extensions import db
 from .models import User, Attendance, KnownFace
 from datetime import datetime
+from sqlalchemy import func, extract
 import face_recognition
 import numpy as np
 from ultralytics import YOLO
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "panda")
 
 app = Blueprint("app", __name__)
 
@@ -55,6 +67,9 @@ def add():
     if request.method == 'POST':
         new_name = request.form.get('newusername')
         new_roll = request.form.get('newuserid')
+        new_phone = request.form.get('newphone', '')
+        new_email = request.form.get('newemail', '')
+        new_address = request.form.get('newaddress', '')
 
         existing_user = User.query.filter_by(roll=new_roll).first()
         if existing_user:
@@ -90,7 +105,7 @@ def add():
             image_path = os.path.join(faces_directory, f'{new_name}_{new_roll}.jpg')
             cv2.imwrite(image_path, resized_frame)
 
-            new_user = User(name=new_name, roll=new_roll)
+            new_user = User(name=new_name, roll=new_roll, phone=new_phone, email=new_email, address=new_address)
             db.session.add(new_user)
 
             new_known_face = KnownFace(name=new_name, encoding=face_encodings[0])
@@ -126,8 +141,35 @@ def start():
     known_face_names = [face.name for face in known_faces]
 
     students = set(known_face_names)
-    marked_attendance = set()
+    # Pre-load today's already-marked attendance from the database
+    today = datetime.now().date()
+    already_marked_today = db.session.query(User.name).join(Attendance).filter(
+        Attendance.date == today
+    ).all()
+    marked_attendance = set(name for (name,) in already_marked_today)
+    students -= marked_attendance
     prev_frame_time = 0
+
+    # Create a named window and bring it to the foreground
+    window_name = "Face Recognition - Attendance"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name, 800, 600)
+
+    # Bring the window to the front on Windows
+    try:
+        import ctypes
+        import ctypes.wintypes
+        hwnd = ctypes.windll.user32.FindWindowW(None, window_name)
+        if hwnd:
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+            ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+    except Exception:
+        pass
+
+    # Auto-close timer: close camera N seconds after last attendance is marked
+    auto_close_delay = 3  # seconds after attendance marked
+    last_marked_time = None
+    attendance_just_marked = False
 
     while True:
         success, img = cap.read()
@@ -136,6 +178,11 @@ def start():
             break
 
         new_frame_time = time.time()
+
+        # Check auto-close: if attendance was marked and delay has passed
+        if last_marked_time and (time.time() - last_marked_time) >= auto_close_delay:
+            break
+
         results = model(img, stream=True, verbose=False)
 
         for r in results:
@@ -171,6 +218,7 @@ def start():
                                     db.session.commit()
                                 
                                 display_text = f"{name}: Attendance Done"
+                                last_marked_time = time.time()
                             else:
                                 display_text = f"{name}: Already Marked"
 
@@ -190,23 +238,43 @@ def start():
                     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
                     cv2.putText(img, "Fake Face", (x1, y2 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
-        fps = 1 / (new_frame_time - prev_frame_time)
+        fps = 1 / (new_frame_time - prev_frame_time) if (new_frame_time - prev_frame_time) > 0 else 0
         prev_frame_time = new_frame_time
         fps_text = f"{int(fps)}"
         cv2.putText(img, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
 
-        cv2.imshow("Image", img)
+        # Show auto-close countdown if attendance was marked
+        if last_marked_time:
+            remaining = max(0, auto_close_delay - (time.time() - last_marked_time))
+            countdown_text = f"Closing in {remaining:.1f}s..."
+            cv2.putText(img, countdown_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
+        # Show instruction text
+        cv2.putText(img, "Press 'Q' to quit", (10, img.shape[0] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+
+        cv2.imshow(window_name, img)
+
+        # Bring window to front on the first frame
+        if prev_frame_time == new_frame_time:
+            try:
+                hwnd = ctypes.windll.user32.FindWindowW(None, window_name)
+                if hwnd:
+                    ctypes.windll.user32.SetForegroundWindow(hwnd)
+            except Exception:
+                pass
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     cap.release()
     cv2.destroyAllWindows()
+    if marked_attendance:
+        flash(f"Attendance marked for: {', '.join(marked_attendance)}", "success")
     return redirect(url_for('app.main'))
 
 
 
-SECURE_PASSWORD = "panda"
+SECURE_PASSWORD = os.environ.get("SECURE_PASSWORD", "panda")
 
 @app.route('/new_add', methods=['POST'])
 def clear_all():
@@ -241,3 +309,240 @@ def clear_all():
 @app.route('/adminn')
 def admin():
     return render_template('destroy.html')
+
+
+# ═══════════════════════════════════════════
+# Admin Panel Routes
+# ═══════════════════════════════════════════
+
+def admin_required(f):
+    """Decorator to check if user is logged in as admin."""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            return redirect(url_for('app.admin_login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route('/admin_login', methods=['GET', 'POST'])
+def admin_login():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session['admin_logged_in'] = True
+            return redirect(url_for('app.admin_dashboard'))
+        else:
+            error = 'Invalid username or password'
+    return render_template('admin_login.html', error=error)
+
+
+@app.route('/admin_logout')
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('app.admin_login'))
+
+
+@app.route('/admin_dashboard')
+@admin_required
+def admin_dashboard():
+    today = datetime.now().date()
+    today_attendance = Attendance.query.filter_by(date=today).all()
+    today_count = len(today_attendance)
+    total_registered = User.query.count()
+    total_records = Attendance.query.count()
+    today_rate = round((today_count / total_registered * 100), 1) if total_registered > 0 else 0
+    all_users = User.query.all()
+
+    # Get available years for yearly report
+    years_query = db.session.query(extract('year', Attendance.date)).distinct().all()
+    years = sorted([int(y[0]) for y in years_query if y[0]], reverse=True)
+    current_year = datetime.now().year
+    if current_year not in years:
+        years.insert(0, current_year)
+
+    return render_template('admin_dashboard.html',
+        today_attendance=today_attendance,
+        today_count=today_count,
+        total_registered=total_registered,
+        total_records=total_records,
+        today_rate=today_rate,
+        all_users=all_users,
+        years=years,
+        current_year=current_year,
+        current_date=today.strftime('%Y-%m-%d')
+    )
+
+
+@app.route('/admin/monthly_report')
+@admin_required
+def monthly_report():
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    if not year or not month:
+        return jsonify({'error': 'Year and month required'}), 400
+
+    records = db.session.query(Attendance, User).join(User).filter(
+        extract('year', Attendance.date) == year,
+        extract('month', Attendance.date) == month
+    ).order_by(Attendance.date, Attendance.time).all()
+
+    records_list = [{
+        'name': user.name,
+        'roll': user.roll,
+        'date': att.date.strftime('%Y-%m-%d'),
+        'time': att.time.strftime('%I:%M:%S %p') if att.time else ''
+    } for att, user in records]
+
+    unique_dates = set(att.date for att, user in records)
+    unique_students = set(user.id for att, user in records)
+
+    return jsonify({
+        'records': records_list,
+        'total_entries': len(records_list),
+        'working_days': len(unique_dates),
+        'unique_students': len(unique_students)
+    })
+
+
+@app.route('/admin/yearly_report')
+@admin_required
+def yearly_report():
+    year = request.args.get('year', type=int, default=datetime.now().year)
+
+    monthly_counts = []
+    for m in range(1, 13):
+        count = Attendance.query.filter(
+            extract('year', Attendance.date) == year,
+            extract('month', Attendance.date) == m
+        ).count()
+        monthly_counts.append(count)
+
+    total_entries = sum(monthly_counts)
+    unique_students = db.session.query(func.count(func.distinct(Attendance.user_id))).filter(
+        extract('year', Attendance.date) == year
+    ).scalar() or 0
+
+    active_days = db.session.query(func.count(func.distinct(Attendance.date))).filter(
+        extract('year', Attendance.date) == year
+    ).scalar() or 0
+
+    return jsonify({
+        'monthly_counts': monthly_counts,
+        'total_entries': total_entries,
+        'unique_students': unique_students,
+        'active_days': active_days
+    })
+
+
+@app.route('/admin/student_report/<int:user_id>')
+@admin_required
+def student_report(user_id):
+    user = User.query.get_or_404(user_id)
+    records = Attendance.query.filter_by(user_id=user.id).order_by(Attendance.date.desc()).all()
+
+    total_days_in_system = db.session.query(func.count(func.distinct(Attendance.date))).scalar() or 1
+    total_present = len(records)
+    percentage = round((total_present / total_days_in_system * 100), 1) if total_days_in_system > 0 else 0
+
+    records_list = [{
+        'date': r.date.strftime('%Y-%m-%d'),
+        'time': r.time.strftime('%I:%M:%S %p') if r.time else ''
+    } for r in records]
+
+    last_seen = records[0].date.strftime('%Y-%m-%d') if records else None
+
+    return jsonify({
+        'name': user.name,
+        'roll': user.roll,
+        'phone': user.phone or '',
+        'email': user.email or '',
+        'address': user.address or '',
+        'total_present': total_present,
+        'attendance_percentage': percentage,
+        'last_seen': last_seen,
+        'records': records_list
+    })
+
+
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@admin_required
+def delete_user(user_id):
+    try:
+        user = User.query.get_or_404(user_id)
+        # Delete attendance records
+        Attendance.query.filter_by(user_id=user.id).delete()
+        # Delete known face
+        KnownFace.query.filter_by(name=user.name).delete()
+        # Delete face image
+        for filename in os.listdir(faces_directory):
+            if user.roll in filename:
+                os.remove(os.path.join(faces_directory, filename))
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/admin/clear_all', methods=['POST'])
+@admin_required
+def admin_clear_all():
+    try:
+        Attendance.query.delete()
+        KnownFace.query.delete()
+        User.query.delete()
+        db.session.commit()
+
+        for filename in os.listdir(faces_directory):
+            file_path = os.path.join(faces_directory, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/admin/export_csv')
+@admin_required
+def export_csv():
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+
+    query = db.session.query(Attendance, User).join(User)
+
+    if year and month:
+        query = query.filter(
+            extract('year', Attendance.date) == year,
+            extract('month', Attendance.date) == month
+        )
+        filename = f'attendance_{year}_{month:02d}.csv'
+    else:
+        filename = 'attendance_all.csv'
+
+    records = query.order_by(Attendance.date, Attendance.time).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['#', 'Name', 'Roll No', 'Date', 'Time'])
+    for i, (att, user) in enumerate(records, 1):
+        writer.writerow([
+            i,
+            user.name,
+            user.roll,
+            att.date.strftime('%Y-%m-%d'),
+            att.time.strftime('%I:%M:%S %p') if att.time else ''
+        ])
+
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )

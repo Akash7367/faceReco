@@ -1,123 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Recognition System</title>
-    <style>
-        body {
-            background-image: url('/static/images/bg_home.gif');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            height: 100vh;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            animation: slowGif 30s linear infinite;
-        }
-
-        @keyframes slowGif {
-            0% { background-position: 0 0; }
-            100% { background-position: 100% 0; }
-        }
-
-        .container {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .animate-text {
-            text-transform: uppercase;
-            background-image: linear-gradient(-225deg,
-                #231557 0%,
-                #44107a 29%,
-                #ff1361 67%,
-                #fff800 100%);
-            background-size: 200% auto;
-            color: #fff;
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: textclip 2s linear infinite;
-            font-size: 6vw;
-            font-weight: 900;
-            line-height: 1.2;
-            margin-bottom: 30px;
-        }
-
-        @keyframes textclip {
-            to {
-                background-position: 200% center;
-            }
-        }
-
-        .start-button {
-            display: inline-block;
-            background-color: white;
-            color: black;
-            font-size: 4vw;
-            font-weight: 900;
-            text-decoration: none;
-            padding: 15px 30px;
-            border-radius: 15px;
-            min-width: 250px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .start-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-
-        a {
-            text-decoration: none;
-        }
-
-        @media (max-width: 768px) {
-            .animate-text {
-                font-size: 8vw;
-                margin-bottom: 20px;
-            }
-
-            .start-button {
-                font-size: 5vw;
-                padding: 10px 20px;
-                min-width: 200px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .animate-text {
-                font-size: 10vw;
-            }
-
-            .start-button {
-                font-size: 6vw;
-                padding: 10px 15px;
-                min-width: 150px;
-            }
-        }
-    </style>
+    <title>Face Recognition Attendance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
 </head>
+
 <body>
-    <div class="container">
-        <div class="animate-text">
-            Welcome To<br>
-            Face Recognition<br>
-            System
+    <!-- Background Effects -->
+    <div class="bg-layer"></div>
+    <div class="grid-overlay"></div>
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="welcome-container">
+        <!-- Scan Animation -->
+        <div class="scan-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21.71.33 1.47.33 2.26 0 4.41-3.59 8-8 8z" />
+            </svg>
+            <div class="scan-line"></div>
         </div>
-        
-        <a href="{{ url_for('app.main') }}" target="_blank">
-            <div class="start-button">
-                START HERE
-            </div>
+
+        <!-- Text -->
+        <div class="welcome-label">Maharshi Dayanand University — U.I.E.T</div>
+        <h1 class="welcome-title">
+            <span class="line1">Face Recognition</span>
+            <span class="line2">Attendance System</span>
+        </h1>
+        <p class="welcome-subtitle">Smart, secure, and instant attendance tracking powered by AI face recognition and
+            anti-spoofing technology.</p>
+
+        <!-- Start Button -->
+        <a href="{{ url_for('app.main') }}" class="start-btn">
+            Get Started
+            <span class="arrow">→</span>
         </a>
     </div>
+
+    <!-- Bottom Badges -->
+    <div class="bottom-info">
+        <div class="info-badge">
+            <span class="dot"></span>
+            System Online
+        </div>
+        <div class="info-badge">
+            🔒 Anti-Spoofing Enabled
+        </div>
+        <div class="info-badge">
+            ⚡ Real-time Processing
+        </div>
+    </div>
 </body>
+
 </html>

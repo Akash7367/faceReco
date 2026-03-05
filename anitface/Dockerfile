@@ -33,4 +33,5 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["python", "run.py"]
+# Run the application with gunicorn
+CMD gunicorn --bind 0.0.0.0:$PORT run:app

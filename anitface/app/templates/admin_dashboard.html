@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Face Recognition System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+</head>
+
+<body>
+
+    <!-- Top Header -->
+    <div class="top-header">
+        <div class="brand">
+            <i class="fa-solid fa-shield-halved"></i>
+            <h2>Admin Dashboard</h2>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('app.main') }}" class="back-btn">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Back to System</span>
+            </a>
+            <a href="{{ url_for('app.admin_logout') }}" class="logout-btn">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav">
+        <button class="active" onclick="showSection('overview', this)">Overview</button>
+        <button onclick="showSection('monthly', this)">Monthly</button>
+        <button onclick="showSection('yearly', this)">Yearly</button>
+        <button onclick="showSection('students', this)">Students</button>
+        <button onclick="showSection('users', this)">Users</button>
+        <button onclick="showSection('settings', this)">Settings</button>
+    </div>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Analytics</div>
+                <button class="sidebar-item active" onclick="showSection('overview', this)">
+                    <i class="fa-solid fa-chart-pie"></i> Overview
+                </button>
+                <button class="sidebar-item" onclick="showSection('monthly', this)">
+                    <i class="fa-solid fa-calendar-days"></i> Monthly Report
+                </button>
+                <button class="sidebar-item" onclick="showSection('yearly', this)">
+                    <i class="fa-solid fa-chart-bar"></i> Yearly Report
+                </button>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Management</div>
+                <button class="sidebar-item" onclick="showSection('students', this)">
+                    <i class="fa-solid fa-user-graduate"></i> Student Reports
+                </button>
+                <button class="sidebar-item" onclick="showSection('users', this)">
+                    <i class="fa-solid fa-users-gear"></i> User Management
+                </button>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">System</div>
+                <button class="sidebar-item" onclick="showSection('export', this)">
+                    <i class="fa-solid fa-file-export"></i> Export Data
+                </button>
+                <button class="sidebar-item" onclick="showSection('settings', this)">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <!-- ═══ OVERVIEW ═══ -->
+            <div id="section-overview" class="page-section active">
+                <h2 class="section-title">Dashboard Overview</h2>
+                <p class="section-subtitle">Real-time attendance system statistics</p>
+
+                <div class="stats-grid">
+                    <div class="stat-card cyan">
+                        <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                        <div class="stat-value" id="stat-registered">{{ total_registered }}</div>
+                        <div class="stat-label">Registered Users</div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+                        <div class="stat-value" id="stat-today">{{ today_count }}</div>
+                        <div class="stat-label">Today's Attendance</div>
+                    </div>
+                    <div class="stat-card gold">
+                        <div class="stat-icon"><i class="fa-solid fa-percent"></i></div>
+                        <div class="stat-value" id="stat-rate">{{ today_rate }}%</div>
+                        <div class="stat-label">Today's Rate</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                        <div class="stat-value" id="stat-total-records">{{ total_records }}</div>
+                        <div class="stat-label">Total Records</div>
+                    </div>
+                </div>
+
+                <!-- Today's Attendance -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fa-solid fa-list-check"></i> Today's Attendance — {{
+                            current_date }}</div>
+                    </div>
+                    <div class="table-wrapper">
+                        {% if today_attendance %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Roll No.</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in today_attendance %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ record.user.name }}</td>
+                                    <td>{{ record.user.roll }}</td>
+                                    <td>{{ record.time.strftime('%I:%M:%S %p') }}</td>
+                                    <td><span class="badge badge-present">Present</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="fa-solid fa-clipboard-question"></i>
+                            <p>No attendance recorded today yet</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ MONTHLY REPORT ═══ -->
+            <div id="section-monthly" class="page-section">
+                <h2 class="section-title">Monthly Report</h2>
+                <p class="section-subtitle">Detailed monthly attendance breakdown</p>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fa-solid fa-calendar-days"></i> Select Month</div>
+                        <div class="panel-actions">
+                            <input type="month" id="monthly-picker" class="filter-input" onchange="loadMonthlyReport()">
+                            <button class="btn btn-primary" onclick="loadMonthlyReport()">
+                                <i class="fa-solid fa-magnifying-glass"></i> Load
+                            </button>
+                        </div>
+                    </div>
+                    <div id="monthly-content">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-calendar"></i>
+                            <p>Select a month to view the report</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ YEARLY REPORT ═══ -->
+            <div id="section-yearly" class="page-section">
+                <h2 class="section-title">Yearly Report</h2>
+                <p class="section-subtitle">Annual attendance overview with monthly breakdown</p>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fa-solid fa-chart-bar"></i> Select Year</div>
+                        <div class="panel-actions">
+                            <select id="yearly-picker" class="filter-select" onchange="loadYearlyReport()">
+                                {% for y in years %}
+                                <option value="{{ y }}" {% if y==current_year %}selected{% endif %}>{{ y }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-primary" onclick="loadYearlyReport()">
+                                <i class="fa-solid fa-magnifying-glass"></i> Load
+                            </button>
+                        </div>
+                    </div>
+                    <div id="yearly-content">
+                        <div class="loading"><i class="fa-solid fa-spinner"></i>
+                            <p>Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ STUDENT REPORTS ═══ -->
+            <div id="section-students" class="page-section">
+                <h2 class="section-title">Student Reports</h2>
+                <p class="section-subtitle">Individual student attendance analysis</p>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fa-solid fa-user-graduate"></i> Select Student</div>
+                        <div class="panel-actions">
+                            <select id="student-picker" class="filter-select">
+                                <option value="">-- Select Student --</option>
+                                {% for user in all_users %}
+                                <option value="{{ user.id }}">{{ user.name }} ({{ user.roll }})</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-primary" onclick="loadStudentReport()">
+                                <i class="fa-solid fa-magnifying-glass"></i> View Report
+                            </button>
+                        </div>
+                    </div>
+                    <div id="student-content">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-user"></i>
+                            <p>Select a student to view their report</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ USER MANAGEMENT ═══ -->
+            <div id="section-users" class="page-section">
+                <h2 class="section-title">User Management</h2>
+                <p class="section-subtitle">Manage registered users in the system</p>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fa-solid fa-users-gear"></i> All Registered Users ({{
+                            total_registered }})</div>
+                    </div>
+                    <div class="table-wrapper">
+                        {% if all_users %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Roll No.</th>
+                                    <th>Total Attendance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in all_users %}
+                                <tr id="user-row-{{ user.id }}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ user.name }}</td>
+                                    <td>{{ user.roll }}</td>
+                                    <td>{{ user.attendance_records|length }}</td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm"
+                                            onclick="deleteUser({{ user.id }}, '{{ user.name }}')">
+                                            <i class="fa-solid fa-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="fa-solid fa-users-slash"></i>
+                            <p>No users registered yet</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ EXPORT DATA ═══ -->
+            <div id="section-export" class="page-section">
+                <h2 class="section-title">Export Data</h2>
+                <p class="section-subtitle">Download attendance records as CSV files</p>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+                    <div class="panel" style="text-align: center; padding: 35px;">
+                        <i class="fa-solid fa-file-csv"
+                            style="font-size: 40px; color: #2ecc71; margin-bottom: 15px;"></i>
+                        <h3 style="margin-bottom: 8px;">All Attendance Records</h3>
+                        <p style="color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 20px;">Download complete
+                            attendance history</p>
+                        <a href="{{ url_for('app.export_csv') }}" class="btn btn-success">
+                            <i class="fa-solid fa-download"></i> Download CSV
+                        </a>
+                    </div>
+                    <div class="panel" style="text-align: center; padding: 35px;">
+                        <i class="fa-solid fa-file-csv"
+                            style="font-size: 40px; color: #00CED1; margin-bottom: 15px;"></i>
+                        <h3 style="margin-bottom: 8px;">Monthly Export</h3>
+                        <p style="color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 20px;">Download records
+                            for a specific month</p>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <input type="month" id="export-month" class="filter-input">
+                            <button class="btn btn-primary" onclick="exportMonthly()">
+                                <i class="fa-solid fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ SETTINGS / DANGER ZONE ═══ -->
+            <div id="section-settings" class="page-section">
+                <h2 class="section-title">Settings</h2>
+                <p class="section-subtitle">System configuration and data management</p>
+
+                <div class="panel" style="margin-bottom: 25px;">
+                    <div class="panel-title"><i class="fa-solid fa-circle-info"></i> System Info</div>
+                    <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="color: rgba(255,255,255,0.4); font-size: 14px;">Total Users</div>
+                        <div style="font-weight: 600;">{{ total_registered }}</div>
+                        <div style="color: rgba(255,255,255,0.4); font-size: 14px;">Total Records</div>
+                        <div style="font-weight: 600;">{{ total_records }}</div>
+                        <div style="color: rgba(255,255,255,0.4); font-size: 14px;">Current Date</div>
+                        <div style="font-weight: 600;">{{ current_date }}</div>
+                    </div>
+                </div>
+
+                <div class="danger-zone">
+                    <h3><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</h3>
+                    <p>This action will permanently delete all users, attendance records, and facial data. This cannot
+                        be undone.</p>
+                    <button class="btn btn-danger" onclick="clearAllData()">
+                        <i class="fa-solid fa-trash-can"></i> Clear All Data
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ═══ Navigation ═══
+        function showSection(sectionId, btn) {
+            // Hide all sections
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section-' + sectionId).classList.add('active');
+
+            // Update sidebar active
+            document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.mobile-nav button').forEach(s => s.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            // Auto-load data
+            if (sectionId === 'yearly') loadYearlyReport();
+        }
+
+        // ═══ Monthly Report ═══
+        async function loadMonthlyReport() {
+            const monthInput = document.getElementById('monthly-picker');
+            if (!monthInput.value) { alert('Please select a month'); return; }
+
+            const [year, month] = monthInput.value.split('-');
+            const container = document.getElementById('monthly-content');
+            container.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner"></i><p>Loading...</p></div>';
+
+            try {
+                const res = await fetch(`/admin/monthly_report?year=${year}&month=${month}`);
+                const data = await res.json();
+
+                if (data.records && data.records.length > 0) {
+                    let html = `
+                        <div class="stats-grid" style="margin-bottom:20px;">
+                            <div class="stat-card cyan">
+                                <div class="stat-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                                <div class="stat-value">${data.working_days}</div>
+                                <div class="stat-label">Days with Attendance</div>
+                            </div>
+                            <div class="stat-card purple">
+                                <div class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+                                <div class="stat-value">${data.total_entries}</div>
+                                <div class="stat-label">Total Entries</div>
+                            </div>
+                            <div class="stat-card gold">
+                                <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                                <div class="stat-value">${data.unique_students}</div>
+                                <div class="stat-label">Unique Students</div>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead><tr><th>#</th><th>Name</th><th>Roll No.</th><th>Date</th><th>Time</th></tr></thead>
+                            <tbody>`;
+                    data.records.forEach((r, i) => {
+                        html += `<tr><td>${i + 1}</td><td>${r.name}</td><td>${r.roll}</td><td>${r.date}</td><td>${r.time}</td></tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><p>No attendance records found for this month</p></div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><p>Error loading report</p></div>';
+            }
+        }
+
+        // ═══ Yearly Report ═══
+        async function loadYearlyReport() {
+            const year = document.getElementById('yearly-picker').value;
+            const container = document.getElementById('yearly-content');
+            container.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner"></i><p>Loading...</p></div>';
+
+            try {
+                const res = await fetch(`/admin/yearly_report?year=${year}`);
+                const data = await res.json();
+
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const maxVal = Math.max(...data.monthly_counts, 1);
+
+                let html = `
+                    <div class="stats-grid" style="margin-bottom:25px;">
+                        <div class="stat-card cyan">
+                            <div class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+                            <div class="stat-value">${data.total_entries}</div>
+                            <div class="stat-label">Total Entries in ${year}</div>
+                        </div>
+                        <div class="stat-card purple">
+                            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                            <div class="stat-value">${data.unique_students}</div>
+                            <div class="stat-label">Active Students</div>
+                        </div>
+                        <div class="stat-card gold">
+                            <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                            <div class="stat-value">${data.active_days}</div>
+                            <div class="stat-label">Active Days</div>
+                        </div>
+                    </div>
+                    <div class="panel-title" style="margin-bottom:15px;"><i class="fa-solid fa-chart-bar"></i> Monthly Breakdown</div>
+                    <div class="chart-container">`;
+
+                data.monthly_counts.forEach((count, i) => {
+                    const pct = maxVal > 0 ? (count / maxVal * 100) : 0;
+                    html += `
+                        <div class="chart-bar-group">
+                            <div class="chart-label">${months[i]}</div>
+                            <div class="chart-bar-bg">
+                                <div class="chart-bar-fill" style="width:${pct}%"></div>
+                            </div>
+                            <div class="chart-value">${count}</div>
+                        </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+
+                // Animate bars
+                setTimeout(() => {
+                    document.querySelectorAll('.chart-bar-fill').forEach(bar => {
+                        bar.style.transition = 'width 0.8s ease';
+                    });
+                }, 50);
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><p>Error loading report</p></div>';
+            }
+        }
+
+        // ═══ Student Report ═══
+        async function loadStudentReport() {
+            const studentId = document.getElementById('student-picker').value;
+            if (!studentId) { alert('Please select a student'); return; }
+
+            const container = document.getElementById('student-content');
+            container.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner"></i><p>Loading...</p></div>';
+
+            try {
+                const res = await fetch(`/admin/student_report/${studentId}`);
+                const data = await res.json();
+
+                const initial = data.name.charAt(0).toUpperCase();
+                const contactInfo = [];
+                if (data.phone) contactInfo.push(`<i class="fa-solid fa-phone" style="color:#00CED1;"></i> ${data.phone}`);
+                if (data.email) contactInfo.push(`<i class="fa-solid fa-envelope" style="color:#7B68EE;"></i> ${data.email}`);
+                if (data.address) contactInfo.push(`<i class="fa-solid fa-location-dot" style="color:#FFD700;"></i> ${data.address}`);
+
+                let html = `
+                    <div class="student-detail-card">
+                        <div class="student-avatar">${initial}</div>
+                        <div class="student-info">
+                            <h3>${data.name}</h3>
+                            <p>Roll No: ${data.roll}</p>
+                            ${contactInfo.length > 0 ? `<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:15px; font-size:13px; color:rgba(255,255,255,0.6);">${contactInfo.join('')}</div>` : ''}
+                        </div>
+                        <div class="student-stats">
+                            <div class="student-stat">
+                                <div class="value">${data.total_present}</div>
+                                <div class="label">Days Present</div>
+                            </div>
+                            <div class="student-stat">
+                                <div class="value">${data.attendance_percentage}%</div>
+                                <div class="label">Attendance %</div>
+                            </div>
+                            <div class="student-stat">
+                                <div class="value">${data.last_seen || 'N/A'}</div>
+                                <div class="label">Last Seen</div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                if (data.records && data.records.length > 0) {
+                    html += `
+                        <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead><tr><th>#</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+                            <tbody>`;
+                    data.records.forEach((r, i) => {
+                        html += `<tr><td>${i + 1}</td><td>${r.date}</td><td>${r.time}</td><td><span class="badge badge-present">Present</span></td></tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<div class="empty-state"><i class="fa-solid fa-clipboard-question"></i><p>No attendance records for this student</p></div>';
+                }
+
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><p>Error loading student report</p></div>';
+            }
+        }
+
+        // ═══ Delete User ═══
+        async function deleteUser(userId, userName) {
+            if (!confirm(`Are you sure you want to delete user "${userName}"? This will also remove their attendance records.`)) return;
+
+            try {
+                const res = await fetch(`/admin/delete_user/${userId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const row = document.getElementById('user-row-' + userId);
+                    if (row) row.remove();
+                    alert('User deleted successfully');
+                } else {
+                    alert(data.message || 'Failed to delete user');
+                }
+            } catch (e) {
+                alert('Error deleting user');
+            }
+        }
+
+        // ═══ Clear All Data ═══
+        async function clearAllData() {
+            const confirmation = prompt('Type "DELETE ALL" to confirm clearing all data:');
+            if (confirmation !== 'DELETE ALL') {
+                alert('Action cancelled.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/admin/clear_all', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert('All data cleared successfully!');
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Failed to clear data');
+                }
+            } catch (e) {
+                alert('Error clearing data');
+            }
+        }
+
+        // ═══ Export Monthly ═══
+        function exportMonthly() {
+            const monthInput = document.getElementById('export-month');
+            if (!monthInput.value) { alert('Please select a month'); return; }
+            const [year, month] = monthInput.value.split('-');
+            window.location.href = `/admin/export_csv?year=${year}&month=${month}`;
+        }
+
+        // ═══ Init ═══
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            const monthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            document.getElementById('monthly-picker').value = monthStr;
+            if (document.getElementById('export-month')) {
+                document.getElementById('export-month').value = monthStr;
+            }
+        });
+    </script>
+</body>
+
+</html>
