@@ -132,7 +132,6 @@ From the admin panel, you can view analytics, export CSVs, delete specific erran
 
 ## 📜 License & Credits
 
-This project was built by [nikh27](https://github.com/nikh27).
-For inquiries or feedback, contact: `niikhilpandey.dev@gmail.com`
+This project was built by [Akash7367](https://github.com/Akash7367).
 
 **License**: MIT License. Feel free to fork, modify, and use this in your institutions!
