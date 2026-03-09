@@ -1,89 +1,138 @@
-# My Flask App
+<div align="center">
+  <img src="https://img.icons8.com/nolan/256/facial-recognition-scan.png" alt="Logo" width="100"/>
+  <h1>🛡️ Anti-Spoofing Face Recognition Attendance System</h1>
+  <p><i>A secure, AI-powered Smart Attendance System that distinguishes between real human faces and printed photos/digital screens.</i></p>
 
-This is a simple Flask application that demonstrates the structure and setup of a Flask project.
+  <p>
+    <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+    <img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white" alt="Flask">
+    <img src="https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white" alt="OpenCV">
+    <img src="https://img.shields.io/badge/YOLOv8-19FF19?style=for-the-badge&logo=YOLO&logoColor=black" alt="YOLOv8">
+    <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite">
+  </p>
+</div>
 
-This project is an anti-spoofing face recognition system. The main idea is to detect faces, manage and store attendance records. The best feature is the ability to detect real versus fake faces. If a real face is detected, it matches the actual user's face and then stores their attendance.
+---
 
-Video link - [Add your video link here]
-Presentation - [Add your presentation link here]
+## 📖 Overview
 
-## Project Structure
+Traditional face-recognition attendance systems are easily fooled by students or employees simply showing a photograph or playing a video on their phone. 
 
-```
-.
+This **Anti-Spoofing Face Recognition System** solves that problem by integrating a **YOLOv8** model to classify faces as `real` or `fake` (photos/screens) before performing the identification match using the `face_recognition` library. Supported by a comprehensive Flask Admin Dashboard, this is a complete solution for schools, universities, and businesses.
+
+## ✨ Key Features
+
+- **🤖 Liveness Detection (Anti-Spoofing)**: Uses a trained YOLOv8 model (`m_version_1_149.pt`) to detect spoof attempts (fake faces).
+- **👤 Robust Face Recognition**: Uses `dlib` and `face_recognition` to accurately identify the `real` person against registered encodings.
+- **🛡️ Duplicate Prevention**: Prevents duplicate attendance entries on the same day.
+- **📊 Admin Dashboard**: A secure control panel to view daily attendance stats, student records, and overall system health.
+- **📈 CSV Export**: One-click export of monthly or all-time attendance records in CSV format.
+- **🐳 Docker Support**: Comes with `Dockerfile` and `docker-compose.yml` for containerized environments.
+- **✨ Beautiful Web Interface**: A sleek, user-friendly frontend built with Flask templates and CSS.
+
+---
+
+## 🛠️ Project Architecture
+
+```plaintext
+anitface/
 ├── app/
-│   ├── static/
-│   │   ├── images/               # Static assets like images
-│   ├── templates/                # HTML templates
-│   ├── __init__.py               # App initialization
-│   ├── extensions.py             # Extensions for the app
-│   ├── models.py                 # Database models
-│   ├── routes.py                 # Application routes
-├── faces/                        # Directory for storing face images
-├── migrations/                   # Database migrations
+│   ├── static/               # CSS, JS, and Image assets
+│   ├── templates/            # HTML Dashboard & Frontend templates
+│   ├── __init__.py           # Flask App and Database init
+│   ├── extensions.py         # SQLAlchemy & Admin extensions
+│   ├── models.py             # User, Attendance, and KnownFace Schema
+│   └── routes.py             # Main Logic: Capturing, Recognition & Admin APIs
+├── faces/                    # Stored user profile images for encodings
 ├── instance/
-│   ├── database.db               # SQLite database file
-├── requirements.txt              # Python dependencies
-├── run.py                        # Application entry point
-├── Dockerfile                    # Docker configuration
-├── docker-compose.yml            # Docker Compose setup
-├── README.md                     # Project documentation
+│   └── database.db           # SQLite DB for attendance & users
+├── m_version_1_149.pt        # YOLOv8 weights for Real vs. Fake detection
+├── requirements.txt          # Python dependencies
+├── run.py                    # Entry point logic
+├── Dockerfile                # Docker Image config
+└── docker-compose.yml        # Docker composition map
 ```
 
-## Installation
+---
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/nikh27/anti_spof.git
-   cd anti-spoof-face-reco
-   ```
+## 🚀 Two-Step Workflow
 
-2. Create a virtual environment:
-   ```
-   python -m venv venv
-   ```
+1. **Anti-Spoofing Check**: The webcam feed is passed through YOLOv8. If a face is detected as a spoof (e.g., photo on phone), it is framed in **Red** and marked as `Fake Face`. Attendance is denied.
+2. **Recognition Match**: If the face is confirmed as `real`, it is framed in **Green**. The system then computes 128-d encodings and determines the identity. Attendance is saved to the SQLite database with the current date/time.
 
-3. Activate the virtual environment:
-   - On Windows:
-     ```
-     venv\Scripts\activate
-     ```
-   - On macOS/Linux:
-     ```
-     source venv/bin/activate
-     ```
+---
 
-4. Install the required packages:
-   ```
-   pip install -r requirements.txt
-   ```
+## ⚙️ Installation & Local Setup
 
-If you face issues downloading the face_recognition dlib file, I provide a precompiled version for Windows users: `dlib-19.24.1-cp311-cp311-win_amd64.whl`. Install this first to avoid dependencies issues.
+### 1. Prerequisites
+- Python 3.10 or 3.11 installed.
+- A working webcam.
 
-Additionally, I have set up Docker for this project.
-
-For better FPS, you can install CUDA to achieve the best performance.
-
-## Configuration
-
-Edit the `config.py` file to set up your configuration settings, such as database connection details and secret keys.
-
-## Running the Application
-
-To run the application, execute the following command:
+### 2. Clone the Repository
+```bash
+git clone https://github.com/nikh27/anti_spof.git
+cd anti-spoof-face-reco/anitface
 ```
+
+### 3. Create a Virtual Environment
+**Windows**:
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+**Linux / macOS**:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 4. Install Dependencies
+> **Note for Windows Users**: Installing `dlib` from pip can be tricky due to C++ build requirements. A pre-compiled `.whl` file is provided in the root directory for Python 3.11.
+
+```bash
+# If on Windows + Python 3.11:
+pip install dlib-19.24.1-cp311-cp311-win_amd64.whl
+
+# Then install the rest:
+pip install -r requirements.txt
+```
+
+### 5. Running the Application
+```bash
 python run.py
 ```
+Open your browser and navigate to: [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 
-The application will be available at `http://127.0.0.1:5000/`.
+> **Pro-Tip**: For maximum FPS during recognition, ensure you have PyTorch compiled with NVIDIA CUDA support.
 
-## Usage
+---
 
-Visit the home page to see the application in action. You can modify the routes and models as needed to fit your requirements.
+## 🐳 Docker Setup
 
-## License
+An easier option if you don't want to deal with local python environments.
+```bash
+# Build and start via Docker Compose
+docker-compose up --build
+```
+> **Note:** Accessing the host's webcam from a docker container may require additional proxying (e.g., sharing `/dev/video0` on Linux) inside `docker-compose.yml`.
 
-This project is licensed under the MIT License.
+---
 
-Email: niikhilpandey.dev@gmail.com
-GitHub: [nikh27](https://github.com/nikh27)
+## 🔐 Admin Usage
+
+The system features a protected admin site.
+
+- **Route:** `/admin_login`
+- **Default Username:** `admin` *(Can be overridden via `ADMIN_USERNAME` in `.env`)*
+- **Default Password:** `panda` *(Can be overridden via `ADMIN_PASSWORD` in `.env`)*
+
+From the admin panel, you can view analytics, export CSVs, delete specific errant records, or wipe the entire database if running a fresh session.
+
+---
+
+## 📜 License & Credits
+
+This project was built by [nikh27](https://github.com/nikh27).
+For inquiries or feedback, contact: `niikhilpandey.dev@gmail.com`
+
+**License**: MIT License. Feel free to fork, modify, and use this in your institutions!
