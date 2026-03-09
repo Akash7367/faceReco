@@ -70,8 +70,8 @@ anitface/
 
 ### 2. Clone the Repository
 ```bash
-git clone https://github.com/nikh27/anti_spof.git
-cd anti-spoof-face-reco/anitface
+git clone https://github.com/Akash7367/faceReco.git
+cd faceReco/anitface
 ```
 
 ### 3. Create a Virtual Environment
